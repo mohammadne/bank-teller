@@ -1,0 +1,10 @@
+{
+    "sheba": {
+        "transfer": {
+            "invalid_body": "Invalid body has been passed",
+            "invalid_source_sheba": "Invalid source sheba has been passed",
+            "invalid_destination_sheba": "Invalid destination sheba has been passed",
+            "success": "Request is saved successfully and is in pending status"
+        }
+    }
+}
