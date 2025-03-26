@@ -5,8 +5,8 @@ import (
 
 	"go.uber.org/zap"
 
-	"github.com/mohammadne/snapp-food/inernal/api/http/i18n"
-	"github.com/mohammadne/snapp-food/inernal/entities"
+	"github.com/mohammadne/bank-teller/inernal/api/http/i18n"
+	"github.com/mohammadne/bank-teller/inernal/entities"
 )
 
 func TestReader(t *testing.T) {

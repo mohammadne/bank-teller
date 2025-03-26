@@ -3,7 +3,7 @@ package middlewares
 import (
 	"github.com/gofiber/fiber/v3"
 
-	"github.com/mohammadne/snapp-food/inernal/entities"
+	"github.com/mohammadne/bank-teller/inernal/entities"
 	"go.uber.org/zap"
 )
 

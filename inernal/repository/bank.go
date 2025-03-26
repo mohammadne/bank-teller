@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/mohammadne/snapp-food/inernal/entities"
+	"github.com/mohammadne/bank-teller/inernal/entities"
 )
 
 type Bank interface {

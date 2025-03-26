@@ -8,12 +8,12 @@ import (
 	"sync"
 	"syscall"
 
-	"github.com/mohammadne/snapp-food/cmd"
-	"github.com/mohammadne/snapp-food/inernal/api/http"
-	"github.com/mohammadne/snapp-food/inernal/config"
-	"github.com/mohammadne/snapp-food/inernal/entities"
-	"github.com/mohammadne/snapp-food/inernal/repository"
-	"github.com/mohammadne/snapp-food/pkg/logger"
+	"github.com/mohammadne/bank-teller/cmd"
+	"github.com/mohammadne/bank-teller/inernal/api/http"
+	"github.com/mohammadne/bank-teller/inernal/config"
+	"github.com/mohammadne/bank-teller/inernal/entities"
+	"github.com/mohammadne/bank-teller/inernal/repository"
+	"github.com/mohammadne/bank-teller/pkg/logger"
 )
 
 func main() {

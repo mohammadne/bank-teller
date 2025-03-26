@@ -8,7 +8,7 @@ import (
 
 	"go.uber.org/zap"
 
-	"github.com/mohammadne/snapp-food/inernal/entities"
+	"github.com/mohammadne/bank-teller/inernal/entities"
 )
 
 //go:embed languages/*.json

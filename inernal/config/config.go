@@ -9,7 +9,7 @@ import (
 
 	"github.com/kelseyhightower/envconfig"
 
-	"github.com/mohammadne/snapp-food/pkg/logger"
+	"github.com/mohammadne/bank-teller/pkg/logger"
 )
 
 type Config struct {

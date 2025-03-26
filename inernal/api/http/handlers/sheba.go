@@ -6,11 +6,11 @@ import (
 	"github.com/gofiber/fiber/v3"
 	"go.uber.org/zap"
 
-	"github.com/mohammadne/snapp-food/inernal/api/http/i18n"
-	"github.com/mohammadne/snapp-food/inernal/api/http/models"
-	"github.com/mohammadne/snapp-food/inernal/entities"
-	"github.com/mohammadne/snapp-food/inernal/repository"
-	// "github.com/mohammadne/snapp-food/internal/usecases"
+	"github.com/mohammadne/bank-teller/inernal/api/http/i18n"
+	"github.com/mohammadne/bank-teller/inernal/api/http/models"
+	"github.com/mohammadne/bank-teller/inernal/entities"
+	"github.com/mohammadne/bank-teller/inernal/repository"
+	// "github.com/mohammadne/bank-teller/internal/usecases"
 )
 
 func NewSheba(r fiber.Router, logger *zap.Logger, i18n i18n.I18N, bank repository.Bank) {

@@ -11,10 +11,10 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"go.uber.org/zap"
 
-	"github.com/mohammadne/snapp-food/inernal/api/http/handlers"
-	"github.com/mohammadne/snapp-food/inernal/api/http/i18n"
-	"github.com/mohammadne/snapp-food/inernal/api/http/middlewares"
-	"github.com/mohammadne/snapp-food/inernal/repository"
+	"github.com/mohammadne/bank-teller/inernal/api/http/handlers"
+	"github.com/mohammadne/bank-teller/inernal/api/http/i18n"
+	"github.com/mohammadne/bank-teller/inernal/api/http/middlewares"
+	"github.com/mohammadne/bank-teller/inernal/repository"
 )
 
 type Server struct {

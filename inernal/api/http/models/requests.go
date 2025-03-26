@@ -1,6 +1,6 @@
 package models
 
-import "github.com/mohammadne/snapp-food/inernal/entities"
+import "github.com/mohammadne/bank-teller/inernal/entities"
 
 type TransferRequest struct {
 	Price           int            `json:"price"`

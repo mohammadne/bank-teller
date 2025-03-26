@@ -1,4 +1,4 @@
-module github.com/mohammadne/snapp-food
+module github.com/mohammadne/bank-teller
 
 go 1.24.1
 

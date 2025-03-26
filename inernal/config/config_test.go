@@ -3,7 +3,7 @@ package config_test
 import (
 	"testing"
 
-	"github.com/mohammadne/snapp-food/inernal/config"
+	"github.com/mohammadne/bank-teller/inernal/config"
 )
 
 func TestLoadDefaults(t *testing.T) {
