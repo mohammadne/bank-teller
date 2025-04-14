@@ -13,18 +13,16 @@ import (
 
 type Bank interface {
 	Transfer(ctx context.Context, from, to entities.Sheba, amount int) (*entities.Transaction, error)
-	ListPendings(ctx context.Context) (pool, error)
-	ListConfirmed(ctx context.Context) (pool, error)
-	ListCanceled(ctx context.Context) (pool, error)
+	ListTransactions(_ context.Context, status string) (pool, error)
 	MoveTransaction(ctx context.Context, transactionID string, status entities.TransactionStatus) (*entities.Transaction, error)
 }
 
 func NewBank(initialUsers []entities.User) Bank {
 	return &bank{
 		Users:     initialUsers,
-		Pendings:  make(pool, 10),
-		Confirmed: make(pool, 100),
-		Canceled:  make(pool, 5),
+		Pendings:  make(pool, 0, 10),
+		Confirmed: make(pool, 0, 100),
+		Canceled:  make(pool, 0, 5),
 	}
 }
 
@@ -44,23 +42,23 @@ var (
 )
 
 func (b *bank) Transfer(_ context.Context, from, to entities.Sheba, amount int) (*entities.Transaction, error) {
-	var fromUser, toUser entities.User
-	for _, user := range b.Users {
+	var fromUserIndex, toUserIndex = -1, -1
+	for index, user := range b.Users {
 		if user.Sheba == from {
-			fromUser = user
+			fromUserIndex = index
 		} else if user.Sheba == to {
-			toUser = user
+			toUserIndex = index
 		}
 	}
 
-	if fromUser.ID == 0 || toUser.ID == 0 {
+	if fromUserIndex == -1 || toUserIndex == -1 {
 		return nil, ErrSourceOrDestinationUsersNotFound
 	}
 
 	b.Locker.Lock()
 	defer b.Locker.Unlock()
 
-	if fromUser.Balance < amount {
+	if b.Users[fromUserIndex].Balance < amount {
 		return nil, ErrNotEnoughBalance
 	}
 
@@ -75,21 +73,26 @@ func (b *bank) Transfer(_ context.Context, from, to entities.Sheba, amount int) 
 	}
 
 	b.Pendings = append(b.Pendings, transaction)
-	fromUser.Balance -= amount
+	b.Users[fromUserIndex].Balance -= amount
 
 	return &transaction, nil
 }
 
-func (b *bank) ListPendings(_ context.Context) (pool, error) {
-	return b.Pendings, nil
-}
+var (
+	ErrListTransactionsInvalidStatus = errors.New("ErrListTransactionsInvalidStatus")
+)
 
-func (b *bank) ListConfirmed(_ context.Context) (pool, error) {
-	return b.Confirmed, nil
-}
+func (b *bank) ListTransactions(_ context.Context, status string) (pool, error) {
+	switch entities.TransactionStatus(status) {
+	case entities.TransactionStatusPending:
+		return b.Pendings, nil
+	case entities.TransactionStatusCanceled:
+		return b.Canceled, nil
+	case entities.TransactionStatusConfirmed:
+		return b.Confirmed, nil
+	}
 
-func (b *bank) ListCanceled(_ context.Context) (pool, error) {
-	return b.Canceled, nil
+	return nil, ErrListTransactionsInvalidStatus
 }
 
 var (

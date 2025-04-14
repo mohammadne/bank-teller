@@ -8,3 +8,7 @@ type TransferRequest struct {
 	ToShebaNumber   entities.Sheba `json:"ToShebaNumber"`
 	Note            string         `json:"note"`
 }
+
+type MoveRequest struct {
+	Status entities.TransactionStatus `json:"status"`
+}

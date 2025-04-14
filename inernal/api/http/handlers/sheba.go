@@ -1,8 +1,6 @@
 package handlers
 
 import (
-	"net/http"
-
 	"github.com/gofiber/fiber/v3"
 	"go.uber.org/zap"
 
@@ -20,8 +18,9 @@ func NewSheba(r fiber.Router, logger *zap.Logger, i18n i18n.I18N, bank repositor
 	}
 
 	g := r.Group("sheba")
-	g.Post("/", handler.transfer)
-	g.Get("/:id", handler.retrieveProduct)
+	g.Get("/:status", handler.listTransactions)
+	g.Post("/", handler.transferMoney)
+	g.Post("/:id", handler.moveTransaction)
 }
 
 type sheba struct {
@@ -30,11 +29,32 @@ type sheba struct {
 	bank   repository.Bank
 }
 
-func (s *sheba) transfer(c fiber.Ctx) error {
+func (s *sheba) listTransactions(c fiber.Ctx) error {
 	response := &models.Response{}
 	language, _ := c.Locals("language").(entities.Language)
-	var request models.TransferRequest
 
+	status := c.Params("status")
+	if len(status) == 0 {
+		response.Message = s.i18n.Translate("sheba.list.status_not_given", language)
+		return response.Write(c, fiber.StatusBadRequest)
+	}
+
+	transactions, err := s.bank.ListTransactions(c.Context(), status)
+	if err != nil {
+		// todo: handle
+		return response.Write(c, fiber.StatusBadRequest)
+	}
+
+	response.Request = transactions
+	response.Message = s.i18n.Translate("sheba.list.success", language)
+	return response.Write(c, fiber.StatusOK)
+}
+
+func (s *sheba) transferMoney(c fiber.Ctx) error {
+	response := &models.Response{}
+	language, _ := c.Locals("language").(entities.Language)
+
+	var request models.TransferRequest
 	if err := c.Bind().Body(&request); err != nil {
 		response.Message = s.i18n.Translate("sheba.transfer.invalid_body", language)
 		return response.Write(c, fiber.StatusBadRequest)
@@ -59,6 +79,29 @@ func (s *sheba) transfer(c fiber.Ctx) error {
 	return response.Write(c, fiber.StatusCreated)
 }
 
-func (h *sheba) retrieveProduct(c fiber.Ctx) error {
-	return c.SendStatus(http.StatusNotImplemented)
+func (s *sheba) moveTransaction(c fiber.Ctx) error {
+	response := &models.Response{}
+	language, _ := c.Locals("language").(entities.Language)
+
+	id := c.Params("id")
+	if len(id) == 0 {
+		response.Message = s.i18n.Translate("sheba.list.id_not_given", language)
+		return response.Write(c, fiber.StatusBadRequest)
+	}
+
+	var request models.MoveRequest
+	if err := c.Bind().Body(&request); err != nil {
+		response.Message = s.i18n.Translate("sheba.transfer.invalid_body", language)
+		return response.Write(c, fiber.StatusBadRequest)
+	}
+
+	transaction, err := s.bank.MoveTransaction(c.Context(), id, request.Status)
+	if err != nil {
+		// todo: handle
+		return response.Write(c, fiber.StatusBadRequest)
+	}
+
+	response.Request = transaction
+	response.Message = s.i18n.Translate("sheba.transfer.success", language)
+	return response.Write(c, fiber.StatusCreated)
 }
