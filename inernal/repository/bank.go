@@ -3,152 +3,164 @@ package repository
 import (
 	"context"
 	"errors"
-	"fmt"
 	"sync"
-	"time"
 
-	"github.com/google/uuid"
 	"github.com/mohammadne/bank-teller/inernal/entities"
 )
 
 type Bank interface {
-	Transfer(ctx context.Context, from, to entities.Sheba, amount int) (*entities.Transaction, error)
-	ListTransactions(_ context.Context, status string) (pool, error)
-	MoveTransaction(ctx context.Context, transactionID string, status entities.TransactionStatus) (*entities.Transaction, error)
+	// users
+	CreateUser(context.Context, entities.User)
+	RetrieveUserBySheba(_ context.Context, sheba entities.Sheba) (entities.User, error)
+	RetrieveUserByID(_ context.Context, id int) (entities.User, error)
+	ListUsers(context.Context) []entities.User
+	UpdateUser(context.Context, entities.User) error
+
+	// transactions
+	CreateTransaction(context.Context, entities.Transaction)
+	RetrieveTransactionByID(_ context.Context, id string) (entities.Transaction, error)
+	ListTransactions(_ context.Context, status entities.TransactionStatus) entities.Pool
+	UpdateTransaction(context.Context, entities.Transaction) error
 }
 
 func NewBank(initialUsers []entities.User) Bank {
 	return &bank{
-		Users:     initialUsers,
-		Pendings:  make(pool, 0, 10),
-		Confirmed: make(pool, 0, 100),
-		Canceled:  make(pool, 0, 5),
+		users:        initialUsers,
+		transactions: make(entities.Pool, 0, 100),
 	}
 }
 
 type bank struct {
-	Users     []entities.User
-	Locker    sync.RWMutex
-	Pendings  pool
-	Confirmed pool
-	Canceled  pool
+	users      []entities.User
+	userLocker sync.RWMutex
+
+	transactions      entities.Pool
+	transactionLocker sync.RWMutex
 }
 
-type pool []entities.Transaction
+func (b *bank) CreateUser(_ context.Context, user entities.User) {
+	b.users = append(b.users, user)
+}
+
+var ErrUserNotFound = errors.New("ErrUserNotFound")
+
+func (b *bank) RetrieveUserBySheba(_ context.Context, sheba entities.Sheba) (entities.User, error) {
+	b.userLocker.RLock()
+	defer b.userLocker.RUnlock()
+
+	for _, user := range b.users {
+		if user.Sheba == sheba {
+			return user, nil
+		}
+	}
+	return entities.User{}, ErrUserNotFound
+}
+
+func (b *bank) RetrieveUserByID(_ context.Context, id int) (entities.User, error) {
+	b.userLocker.RLock()
+	defer b.userLocker.RUnlock()
+
+	for _, user := range b.users {
+		if user.ID == id {
+			return user, nil
+		}
+	}
+	return entities.User{}, ErrUserNotFound
+}
+
+func (b *bank) ListUsers(_ context.Context) []entities.User {
+	b.userLocker.RLock()
+	defer b.userLocker.RUnlock()
+
+	result := make([]entities.User, len(b.users))
+	copy(result, b.users)
+
+	return result
+}
+
+var (
+	ErrInvalidUser      = errors.New("ErrInvalidUser")
+	ErrInvalidUserSheba = errors.New("ErrInvalidUserSheba")
+)
+
+func (b *bank) UpdateUser(_ context.Context, updatedUser entities.User) error {
+	if updatedUser.ID <= 0 {
+		return ErrInvalidUser
+	}
+
+	for index, user := range b.users {
+		if user.ID == updatedUser.ID {
+			if !user.CheckImmutable(&updatedUser) {
+				return ErrInvalidUserSheba
+			}
+
+			b.userLocker.Lock()
+			b.users[index] = updatedUser
+			b.userLocker.Unlock()
+			break
+		}
+	}
+
+	return nil
+}
 
 var (
 	ErrSourceOrDestinationUsersNotFound = errors.New("error source or destination users not found")
 	ErrNotEnoughBalance                 = errors.New("error not enough balance")
 )
 
-func (b *bank) Transfer(_ context.Context, from, to entities.Sheba, amount int) (*entities.Transaction, error) {
-	var fromUserIndex, toUserIndex = -1, -1
-	for index, user := range b.Users {
-		if user.Sheba == from {
-			fromUserIndex = index
-		} else if user.Sheba == to {
-			toUserIndex = index
+func (b *bank) CreateTransaction(_ context.Context, t entities.Transaction) {
+	b.transactions = append(b.transactions, t)
+}
+
+var ErrTransactionNotFound = errors.New("ErrTransactionNotFound")
+
+func (b *bank) RetrieveTransactionByID(_ context.Context, id string) (entities.Transaction, error) {
+	b.transactionLocker.RLock()
+	defer b.transactionLocker.RUnlock()
+
+	for _, transaction := range b.transactions {
+		if transaction.ID == id {
+			return transaction, nil
 		}
 	}
+	return entities.Transaction{}, ErrTransactionNotFound
+}
 
-	if fromUserIndex == -1 || toUserIndex == -1 {
-		return nil, ErrSourceOrDestinationUsersNotFound
+func (b *bank) ListTransactions(_ context.Context, status entities.TransactionStatus) entities.Pool {
+	b.transactionLocker.RLock()
+	defer b.transactionLocker.RUnlock()
+
+	result := make(entities.Pool, 0, len(b.transactions))
+	for _, transaction := range b.transactions {
+		if transaction.Status == status {
+			result = append(result, transaction)
+		}
 	}
-
-	b.Locker.Lock()
-	defer b.Locker.Unlock()
-
-	if b.Users[fromUserIndex].Balance < amount {
-		return nil, ErrNotEnoughBalance
-	}
-
-	createdAt := time.Now()
-	transaction := entities.Transaction{
-		ID:        fmt.Sprintf("%d-%s", createdAt.Unix(), uuid.New().String()),
-		Status:    entities.TransactionStatusPending,
-		From:      from,
-		To:        to,
-		Amount:    amount,
-		CreatedAt: createdAt,
-	}
-
-	b.Pendings = append(b.Pendings, transaction)
-	b.Users[fromUserIndex].Balance -= amount
-
-	return &transaction, nil
+	return result
 }
 
 var (
-	ErrListTransactionsInvalidStatus = errors.New("ErrListTransactionsInvalidStatus")
+	ErrInvalidTransaction = errors.New("ErrInvalidTransaction")
 )
 
-func (b *bank) ListTransactions(_ context.Context, status string) (pool, error) {
-	switch entities.TransactionStatus(status) {
-	case entities.TransactionStatusPending:
-		return b.Pendings, nil
-	case entities.TransactionStatusCanceled:
-		return b.Canceled, nil
-	case entities.TransactionStatusConfirmed:
-		return b.Confirmed, nil
+func (b *bank) UpdateTransaction(_ context.Context, updatedTransaction entities.Transaction) error {
+	if len(updatedTransaction.ID) <= 0 {
+		return ErrInvalidTransaction
 	}
 
-	return nil, ErrListTransactionsInvalidStatus
-}
+	for index, transaction := range b.transactions {
+		if transaction.ID == updatedTransaction.ID {
+			if !transaction.CheckImmutable(&updatedTransaction) {
+				return ErrInvalidUserSheba
+			}
 
-var (
-	ErrInvalidMoveTransactionStatus = errors.New("ErrInvalidMovetransactionStatus")
-	ErrMoveTransactionNotFound      = errors.New("ErrMoveTransactionNotFound")
-	ErrMoveTransactionUserNotFound  = errors.New("ErrMoveTransactionUserNotFound")
-)
-
-func (b *bank) MoveTransaction(_ context.Context, transactionID string, status entities.TransactionStatus) (*entities.Transaction, error) {
-	if status == entities.TransactionStatusPending {
-		return nil, ErrInvalidMoveTransactionStatus
-	}
-
-	var targetTransaction entities.Transaction
-	var targetTransactionIndex = -1
-	for index, transaction := range b.Pendings {
-		if transaction.ID == transactionID {
-			targetTransaction = transaction
-			targetTransactionIndex = index
+			b.transactionLocker.Lock()
+			b.transactions[index] = updatedTransaction
+			b.transactionLocker.Unlock()
 			break
 		}
 	}
 
-	if targetTransactionIndex == -1 {
-		return nil, ErrMoveTransactionNotFound
-	}
-
-	b.Locker.Lock()
-	defer b.Locker.Unlock()
-
-	var shebaToMatch entities.Sheba
-	var addToPool func(entities.Transaction)
-
-	if status == entities.TransactionStatusConfirmed {
-		shebaToMatch = targetTransaction.To
-		addToPool = func(t entities.Transaction) { b.Confirmed = append(b.Confirmed, t) }
-	} else {
-		shebaToMatch = targetTransaction.From
-		addToPool = func(t entities.Transaction) { b.Canceled = append(b.Canceled, t) }
-	}
-
-	userIndex := -1
-	for index, user := range b.Users {
-		if user.Sheba == shebaToMatch {
-			userIndex = index
-			break
-		}
-	}
-	if userIndex == -1 {
-		return nil, ErrMoveTransactionUserNotFound
-	}
-
-	b.Users[userIndex].Balance += targetTransaction.Amount
-	targetTransaction.Status = status
-	b.Pendings = append(b.Pendings[:targetTransactionIndex], b.Pendings[targetTransactionIndex+1:]...)
-	addToPool(targetTransaction)
-
-	return &targetTransaction, nil
+	return nil
 }

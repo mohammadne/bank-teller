@@ -13,6 +13,7 @@ import (
 	"github.com/mohammadne/bank-teller/inernal/config"
 	"github.com/mohammadne/bank-teller/inernal/entities"
 	"github.com/mohammadne/bank-teller/inernal/repository"
+	"github.com/mohammadne/bank-teller/inernal/usecases"
 	"github.com/mohammadne/bank-teller/pkg/logger"
 	"go.uber.org/zap"
 )
@@ -53,12 +54,16 @@ func main() {
 		},
 	})
 
+	// usecases
+	sheba := usecases.NewSheba(bank)
+	users := usecases.NewUsers(bank)
+
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 	var wg sync.WaitGroup
 
 	wg.Add(1)
-	go http.New(logger, bank).Serve(ctx, &wg, *monitorPort, *requestPort)
+	go http.New(logger, sheba, users).Serve(ctx, &wg, *monitorPort, *requestPort)
 
 	<-ctx.Done()
 	wg.Wait()

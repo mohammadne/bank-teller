@@ -14,7 +14,7 @@ import (
 	"github.com/mohammadne/bank-teller/inernal/api/http/handlers"
 	"github.com/mohammadne/bank-teller/inernal/api/http/i18n"
 	"github.com/mohammadne/bank-teller/inernal/api/http/middlewares"
-	"github.com/mohammadne/bank-teller/inernal/repository"
+	"github.com/mohammadne/bank-teller/inernal/usecases"
 )
 
 type Server struct {
@@ -24,7 +24,7 @@ type Server struct {
 	requestApp *fiber.App
 }
 
-func New(log *zap.Logger, bank repository.Bank) *Server {
+func New(log *zap.Logger, sheba usecases.Sheba, users usecases.Users) *Server {
 	server := &Server{logger: log}
 
 	{
@@ -44,7 +44,8 @@ func New(log *zap.Logger, bank repository.Bank) *Server {
 
 		api := server.requestApp.Group("api")
 		middlewares.NewLanguage(api, log)
-		handlers.NewSheba(api, log, i18n, bank)
+		handlers.NewSheba(api, log, i18n, sheba)
+		handlers.NewUsers(api, log, i18n, users)
 	}
 
 	return server
