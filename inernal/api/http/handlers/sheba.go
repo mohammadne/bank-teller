@@ -10,7 +10,6 @@ import (
 	"github.com/mohammadne/bank-teller/inernal/api/http/models"
 	"github.com/mohammadne/bank-teller/inernal/entities"
 	"github.com/mohammadne/bank-teller/inernal/repository"
-	// "github.com/mohammadne/bank-teller/internal/usecases"
 )
 
 func NewSheba(r fiber.Router, logger *zap.Logger, i18n i18n.I18N, bank repository.Bank) {
@@ -20,9 +19,9 @@ func NewSheba(r fiber.Router, logger *zap.Logger, i18n i18n.I18N, bank repositor
 		bank:   bank,
 	}
 
-	products := r.Group("sheba")
-	products.Post("/", handler.transfer)
-	products.Get("/:id", handler.retrieveProduct)
+	g := r.Group("sheba")
+	g.Post("/", handler.transfer)
+	g.Get("/:id", handler.retrieveProduct)
 }
 
 type sheba struct {

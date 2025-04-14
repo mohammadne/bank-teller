@@ -14,25 +14,19 @@ import (
 	"github.com/mohammadne/bank-teller/inernal/entities"
 	"github.com/mohammadne/bank-teller/inernal/repository"
 	"github.com/mohammadne/bank-teller/pkg/logger"
+	"go.uber.org/zap"
 )
 
 func main() {
-	port := flag.Int("port", 8088, "The server port which handles requests (default: 8088)")
+	monitorPort := flag.Int("monitor-port", 8001, "The server port which handles monitoring endpoints (default: 8001)")
+	requestPort := flag.Int("request-port", 8002, "The server port which handles http requests (default: 8002)")
 	environmentRaw := flag.String("environment", "", "The environment (default: local)")
 	flag.Parse() // Parse the command-line flags
 
-	var cfg config.Config
-	var err error
-
-	switch config.ToEnvironment(*environmentRaw) {
-	case config.EnvironmentLocal:
-		cfg, err = config.LoadDefaults(true)
-	default:
-		cfg, err = config.Load(true)
-	}
-
+	environment := config.ToEnvironment(*environmentRaw)
+	cfg, err := config.Load(environment)
 	if err != nil {
-		log.Fatalf("failed to load config: \n%v", err)
+		log.Panicf("failed to load config: \n%v", err)
 	}
 
 	logger, err := logger.New(cfg.Logger)
@@ -40,7 +34,11 @@ func main() {
 		log.Fatalf("failed to initialize logger: \n%v", err)
 	}
 
-	logger.Warn("Build Information", cmd.BuildInfo()...)
+	buildInformations := make([]zap.Field, 0)
+	for key, value := range cmd.BuildInfo() {
+		buildInformations = append(buildInformations, zap.String(key, value))
+	}
+	logger.Warn("Build Information", buildInformations...)
 
 	bank := repository.NewBank([]entities.User{
 		{
@@ -60,7 +58,7 @@ func main() {
 	var wg sync.WaitGroup
 
 	wg.Add(1)
-	go http.New(logger, bank).Serve(ctx, &wg, *port)
+	go http.New(logger, bank).Serve(ctx, &wg, *monitorPort, *requestPort)
 
 	<-ctx.Done()
 	wg.Wait()

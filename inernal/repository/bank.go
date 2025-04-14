@@ -13,10 +13,10 @@ import (
 
 type Bank interface {
 	Transfer(ctx context.Context, from, to entities.Sheba, amount int) (*entities.Transaction, error)
-	ListPendings(_ context.Context) (pool, error)
-	ListConfirmed(_ context.Context) (pool, error)
-	ListCanceled(_ context.Context) (pool, error)
-	MoveTransaction(_ context.Context, transactionID string, status entities.TransactionStatus) (*entities.Transaction, error)
+	ListPendings(ctx context.Context) (pool, error)
+	ListConfirmed(ctx context.Context) (pool, error)
+	ListCanceled(ctx context.Context) (pool, error)
+	MoveTransaction(ctx context.Context, transactionID string, status entities.TransactionStatus) (*entities.Transaction, error)
 }
 
 func NewBank(initialUsers []entities.User) Bank {
